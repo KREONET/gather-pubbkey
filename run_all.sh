@@ -26,11 +26,8 @@ echo "경고: SSH 호스트 키 검증이 비활성화됩니다. (StrictHostKeyC
 
 # 1. 원격 서버에서 Bash로 authorized_keys 파일 내용 수집
 echo -e "\n[단계 1/2] 원격 서버에서 Bash로 authorized_keys 파일 내용 수집 중..."
-# sudo 권한이 필요한 경우, inventory.ini에 ansible_become_pass를 설정하거나
-# ansible_user가 NOPASSWD sudo를 사용하도록 설정하는 것이 가장 좋습니다.
 
 # SSH StrictHostKeyChecking을 비활성화하여 연결 시 질문을 제거합니다.
-# UserKnownHostsFile=/dev/null은 known_hosts 파일을 사용하지 않도록 합니다.
 ansible-playbook -i "$INVENTORY_FILE" "$ANSIBLE_BASH_ONLY_PLAYBOOK" --ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 if [ $? -ne 0 ]; then
     echo "오류: Ansible 플레이북 ($ANSIBLE_BASH_ONLY_PLAYBOOK) 실행에 실패했습니다."
