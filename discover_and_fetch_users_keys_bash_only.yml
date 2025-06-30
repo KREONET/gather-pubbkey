@@ -1,12 +1,8 @@
 # playbook: discover_and_fetch_users_keys_bash_only.yml
-    # 설명: 원격 서버에 Python 없이 Bash 명령어를 사용하여 authorized_keys 파일 내용을 수집합니다.
-    #      수집된 내용은 클라이언트의 로컬 파일에 저장됩니다.
-    #      Zsh 쉘 환경에서 '/home/*' 패턴 일치 오류를 해결합니다.
 
-    - name: 원격 서버에서 Bash로 authorized_keys 파일 내용 수집 (Python 없이)
+    - name: 원격 서버에서 Bash로 authorized_keys 파일 내용 수집
       hosts: all # 인벤토리 파일에 정의된 모든 호스트에 적용됩니다.
-      gather_facts: no # Python이 없으므로 사실 수집을 수행하지 않습니다.
-      # 원격 서버에 Python이 없으므로 ansible_python_interpreter 설정은 불필요합니다.
+      gather_facts: no
       # sudo 권한이 필요할 수 있습니다. (특히 /root/.ssh/authorized_keys 접근 시)
 
       tasks:
@@ -17,13 +13,6 @@
           # Zsh 호환성을 위해 shopt -s nullglob 추가
           ansible.builtin.raw: |
             #!/bin/bash
-            
-            # Zsh 환경에서 globbing 오류 방지를 위해 nullglob 활성화 (Bash에서는 기본적으로 유사하게 작동)
-            # shopt -s nullglob
-            # 위 shopt는 Bash 전용이므로, Zsh에서 실행될 경우를 대비하여 더 일반적인 접근 방식 사용.
-            # 또는 원격 서버의 기본 쉘이 Zsh라면, 해당 서버의 쉘을 명시적으로 Bash로 지정하거나
-            # Zsh 스크립트 문법에 맞게 조정해야 합니다.
-            # 가장 확실한 방법은 find 명령을 사용하는 것입니다.
 
             # 현재 호스트 이름 가져오기
             HOSTNAME=$(hostname)
