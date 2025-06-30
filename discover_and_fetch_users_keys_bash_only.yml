@@ -1,0 +1,65 @@
+# playbook: discover_and_fetch_users_keys_bash_only.yml
+    # 설명: 원격 서버에 Python 없이 Bash 명령어를 사용하여 authorized_keys 파일 내용을 수집합니다.
+    #      수집된 내용은 클라이언트의 로컬 파일에 저장됩니다.
+    #      Zsh 쉘 환경에서 '/home/*' 패턴 일치 오류를 해결합니다.
+
+    - name: 원격 서버에서 Bash로 authorized_keys 파일 내용 수집 (Python 없이)
+      hosts: all # 인벤토리 파일에 정의된 모든 호스트에 적용됩니다.
+      gather_facts: no # Python이 없으므로 사실 수집을 수행하지 않습니다.
+      # 원격 서버에 Python이 없으므로 ansible_python_interpreter 설정은 불필요합니다.
+      # sudo 권한이 필요할 수 있습니다. (특히 /root/.ssh/authorized_keys 접근 시)
+
+      tasks:
+        - name: /root/.ssh/authorized_keys 및 /home/*/.ssh/authorized_keys 파일 내용 수집 (Bash 스크립트)
+          # raw 모듈을 사용하여 원격 호스트에 Python이 없어도 직접 셸 명령어를 실행합니다.
+          # 이 Bash 스크립트는 모든 authorized_keys 파일의 내용을 수집하여
+          # '---HOST:<hostname>---'와 '---USER:<username>---' 구분자를 사용하여 출력합니다.
+          # Zsh 호환성을 위해 shopt -s nullglob 추가
+          ansible.builtin.raw: |
+            #!/bin/bash
+            
+            # Zsh 환경에서 globbing 오류 방지를 위해 nullglob 활성화 (Bash에서는 기본적으로 유사하게 작동)
+            # shopt -s nullglob
+            # 위 shopt는 Bash 전용이므로, Zsh에서 실행될 경우를 대비하여 더 일반적인 접근 방식 사용.
+            # 또는 원격 서버의 기본 쉘이 Zsh라면, 해당 서버의 쉘을 명시적으로 Bash로 지정하거나
+            # Zsh 스크립트 문법에 맞게 조정해야 합니다.
+            # 가장 확실한 방법은 find 명령을 사용하는 것입니다.
+
+            # 현재 호스트 이름 가져오기
+            HOSTNAME=$(hostname)
+            echo "---HOST:$HOSTNAME---"
+            
+            # root의 authorized_keys 파일 처리
+            ROOT_AUTH_KEYS="/root/.ssh/authorized_keys"
+            if [ -f "$ROOT_AUTH_KEYS" ]; then
+              echo "---USER:root---"
+              # sudo를 사용하여 접근 권한 문제를 해결합니다. 2>/dev/null은 stderr를 버립니다.
+              sudo cat "$ROOT_AUTH_KEYS" 2>/dev/null || echo "Error reading root authorized_keys for $HOSTNAME"
+            fi
+            
+            # /home 디렉토리 내의 사용자 authorized_keys 파일 처리 (find 명령 사용으로 Zsh 호환성 향상)
+            # find 명령은 쉘의 globbing 규칙에 영향을 받지 않으므로 더 견고합니다.
+            find /home -maxdepth 1 -mindepth 1 -type d | while read HOME_DIR; do
+              USERNAME=$(basename "$HOME_DIR")
+              USER_AUTH_KEYS="$HOME_DIR/.ssh/authorized_keys"
+              
+              if [ -f "$USER_AUTH_KEYS" ]; then
+                echo "---USER:$USERNAME---"
+                cat "$USER_AUTH_KEYS" 2>/dev/null || echo "Error reading $USERNAME authorized_keys for $HOSTNAME"
+              fi
+            done
+            
+            echo "" # 스크립트 끝에 추가적인 개행 문자를 넣어서 출력 완료를 명확히 합니다.
+          register: auth_keys_output # raw 명령의 stdout을 이 변수에 저장합니다.
+          become: yes # 'sudo cat' 및 `/root` 디렉토리 접근을 위해 필요합니다.
+
+        - name: 수집된 authorized_keys 내용을 로컬 파일에 저장
+          ansible.builtin.copy:
+            content: "{{ auth_keys_output.stdout }}"
+            dest: "./fetched_data/{{ inventory_hostname }}_raw_auth_keys.txt"
+          delegate_to: localhost
+
+        - name: Bash 스크립트 실행 중 발생한 오류 (stderr) 디버그
+          ansible.builtin.debug:
+            msg: "Stderr for {{ inventory_hostname }}: {{ auth_keys_output.stderr }}"
+          when: auth_keys_output.stderr | length > 0
