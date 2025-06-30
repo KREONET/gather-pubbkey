@@ -8,7 +8,7 @@ bash run_all.sh
 # 유의사항
 
 ## pubkey를 이용한  접속
-`inventory.ini`의 `(ip changeme)'에 적절한 ip를 입력한다.
+`inventory.ini`의 `(ip changeme)'에 적절한 ip를 입력한다.<br>
 `inventory.ini`의 `ansible_ssh_private_key_file`에 프로그램을 실행하는 PC의 pubkey 경로를 입력한다.
 
 ## 보고서 확인
