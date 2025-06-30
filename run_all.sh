@@ -1,10 +1,5 @@
 !/bin/bash
 
-# Bash Orchestrator Script: run_all.sh
-# 설명: 원격 서버에 Python을 설치하지 않고, Bash 명령어를 사용하여 authorized_keys 파일을 수집하고,
-#      HTML 보고서 생성을 자동화합니다.
-#      SSH StrictHostKeyChecking을 비활성화하여 연결 시 질문을 제거합니다.
-#      최종적으로 생성된 HTML 보고서를 자동으로 웹 브라우저로 엽니다.
 # 사용법: bash run_all.sh 또는 ./run_all.sh (실행 권한 부여 후)
 
 INVENTORY_FILE="inventory.ini"
